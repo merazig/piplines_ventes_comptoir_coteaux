@@ -1,4 +1,4 @@
-"""Exécute les traitements SQL avec DuckDB."""
+"""Execute the SQL pipeline."""
 
 from pathlib import Path
 
@@ -9,20 +9,20 @@ SQL_DIR = Path("sql")
 
 
 def execute_sql(filename: str) -> None:
-    """Exécute un fichier SQL avec DuckDB."""
+    """Execute a SQL file with DuckDB."""
     sql_path = SQL_DIR / filename
     sql = sql_path.read_text(encoding="utf-8")
-
-    connection = duckdb.connect()
-
-    connection.execute(sql)
-    
-    connection.close()
-
+    duckdb.sql(sql)
     print(f"Script SQL exécuté : {sql_path}")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Execute SQL scripts in pipeline order."""
+    execute_sql("clean.sql")
+    execute_sql("deduplicate.sql")
+    execute_sql("merge.sql")
     execute_sql("sales.sql")
-    
 
+
+if __name__ == "__main__":
+    main()

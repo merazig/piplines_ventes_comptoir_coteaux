@@ -3,3 +3,4 @@ plan.md
 *.ipynb
 .ruff_cache
 work/parquet/
+__pycache__

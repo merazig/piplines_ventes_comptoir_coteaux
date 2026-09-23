@@ -1,0 +1,12 @@
+id: ventes_comptoir_coteaux
+namespace: company.team
+
+tasks:
+  - id: convert_to_parquet
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ventes-comptoir-coteaux
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+    commands:
+      - cd /app/project
+      - python -m scripts.convert_to_parquet

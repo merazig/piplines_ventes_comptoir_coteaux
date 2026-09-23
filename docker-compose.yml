@@ -32,6 +32,7 @@ services:
       - kestra-data:/app/storage
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/kestra-wd:/tmp/kestra-wd
+      - ./:/app/project
     environment:
       KESTRA_CONFIGURATION: |
         datasources:
@@ -56,6 +57,11 @@ services:
           tasks:
             tmp-dir:
               path: /tmp/kestra-wd/tmp
+          plugins:
+            configurations:
+              - type: io.kestra.plugin.scripts.runner.docker.Docker
+                values:
+                  volume-enabled: true
           url: http://localhost:8080/
     ports:
       - "8080:8080"
@@ -66,3 +72,4 @@ services:
     depends_on:
       postgres:
         condition: service_started
+

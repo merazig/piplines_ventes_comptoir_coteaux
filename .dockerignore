@@ -4,3 +4,4 @@ plan.md
 .ruff_cache
 work/parquet/
 __pycache__
+outputs/

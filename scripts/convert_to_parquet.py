@@ -13,7 +13,7 @@ def convert_excel_to_parquet(filename: str, output_name: str) -> None:
     input_path = DATA_DIR / filename
     output_path = OUTPUT_DIR / output_name
 
-    df = pd.read_excel(input_path)
+    df = pd.read_excel(input_path, engine="calamine")
 
     if filename == "fichier_liaison.xlsx":
         df["id_web"] = df["id_web"].astype("string")

@@ -1,9 +1,12 @@
--- Suprimer les doublons
+-- Supprimer les doublons
 
 COPY (
     SELECT *
-    FROM read_parquet('work/parquet/web_clean.parquet')
+    FROM read_parquet(
+        's3://comptoir-coteaux/parquet/{{PERIOD}}/silver/web_clean.parquet'
+    )
     WHERE post_type = 'product'
 )
-TO 'work/parquet/web_deduplicated.parquet'
+TO 's3://comptoir-coteaux/parquet/{{PERIOD}}/silver/web_deduplicated.parquet'
 (FORMAT PARQUET);
+

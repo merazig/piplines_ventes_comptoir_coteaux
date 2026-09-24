@@ -5,3 +5,4 @@ pyarrow==25.0.1
 pytest==9.1.1
 python-calamine==0.8.2
 python-dotenv==1.2.3
+xlsxwriter==3.2.9

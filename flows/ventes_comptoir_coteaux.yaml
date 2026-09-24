@@ -53,10 +53,17 @@ tasks:
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ventes-comptoir-coteaux
     pythonVersion: "3.12"
+
+    env:
+      S3_ENDPOINT: "http://minio:9000"
+      MINIO_ROOT_USER: "{{ secret('MINIO_ROOT_USER') }}"
+      MINIO_ROOT_PASSWORD: "{{ secret('MINIO_ROOT_PASSWORD') }}"
+      MINIO_BUCKET: "comptoir-coteaux"
+
     taskRunner:
       type: io.kestra.plugin.scripts.runner.docker.Docker
       networkMode: "piplines_ventes_comptoir_coteaux_app-network"
 
     commands:
       - cd /app
-      - PYTHONPATH=/app python -m scripts.tmp
+      - PYTHONPATH=/app python -m scripts.convert_to_parquet

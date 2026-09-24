@@ -13,7 +13,7 @@ period = date.today().strftime("%Y-%m")
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "input/"))
 OUTPUT_DIR = Path(
-    os.getenv("OUTPUT_DIR", f"parquet/bronze/{period}/")
+    os.getenv("OUTPUT_DIR", f"parquet/{period}/bronze/")
 )
 
 
@@ -42,7 +42,7 @@ def convert_excel_to_parquet(
 
     upload_file(
         str(output_path),
-        f"parquet/bronze/{period}/{output_name}",
+        f"parquet/{period}/bronze/{output_name}",
     )
 
     print(f"{filename} : {len(df)} lignes -> {output_path}")

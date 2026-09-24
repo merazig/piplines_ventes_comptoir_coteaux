@@ -4,6 +4,7 @@ import duckdb
 
 import pandas as pd
 
+
 def test_erp_count() -> None:
     """Check the number of ERP rows."""
     result = duckdb.sql("""
@@ -68,6 +69,7 @@ def test_total_revenue() -> None:
 
     assert result is not None
     assert result[0] == 70568.6
+
 
 def test_premium_wines() -> None:
     """Check the number of premium wines."""

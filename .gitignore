@@ -5,3 +5,5 @@ plan.md
 work/parquet/
 __pycache__
 outputs/
+.env
+.env_encoded

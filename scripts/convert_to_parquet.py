@@ -12,9 +12,7 @@ from datetime import date
 period = date.today().strftime("%Y-%m")
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "input/"))
-OUTPUT_DIR = Path(
-    os.getenv("OUTPUT_DIR", f"parquet/{period}/bronze/")
-)
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", f"parquet/{period}/bronze/"))
 
 
 def convert_excel_to_parquet(

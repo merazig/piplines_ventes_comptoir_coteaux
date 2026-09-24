@@ -1,53 +1,14 @@
 id: ventes_comptoir_coteaux
 namespace: company.team
 
-inputs:
-  - id: fichier_erp
-    type: FILE
-    required: true
+triggers:
+  - id: monthly
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 9 15 * *"
+    timezone: Europe/Paris
 
-  - id: fichier_liaison
-    type: FILE
-    required: true
-
-  - id: fichier_web
-    type: FILE
-    required: true
 
 tasks:
-  - id: create_bucket
-    type: io.kestra.plugin.minio.CreateBucket
-    endpoint: http://minio:9000
-    bucket: comptoir-coteaux
-    accessKeyId: "{{ secret('MINIO_ROOT_USER') }}"
-    secretKeyId: "{{ secret('MINIO_ROOT_PASSWORD') }}"
-
-  - id: upload_erp
-    type: io.kestra.plugin.minio.Upload
-    endpoint: http://minio:9000
-    bucket: comptoir-coteaux
-    key: input/Fichier_erp.xlsx
-    from: "{{ inputs.fichier_erp }}"
-    accessKeyId: "{{ secret('MINIO_ROOT_USER') }}"
-    secretKeyId: "{{ secret('MINIO_ROOT_PASSWORD') }}"
-
-  - id: upload_liaison
-    type: io.kestra.plugin.minio.Upload
-    endpoint: http://minio:9000
-    bucket: comptoir-coteaux
-    key: input/fichier_liaison.xlsx
-    from: "{{ inputs.fichier_liaison }}"
-    accessKeyId: "{{ secret('MINIO_ROOT_USER') }}"
-    secretKeyId: "{{ secret('MINIO_ROOT_PASSWORD') }}"
-
-  - id: upload_web
-    type: io.kestra.plugin.minio.Upload
-    endpoint: http://minio:9000
-    bucket: comptoir-coteaux
-    key: input/Fichier_web.xlsx
-    from: "{{ inputs.fichier_web }}"
-    accessKeyId: "{{ secret('MINIO_ROOT_USER') }}"
-    secretKeyId: "{{ secret('MINIO_ROOT_PASSWORD') }}"
 
   - id: convert_to_parquet
     type: io.kestra.plugin.scripts.python.Commands
@@ -67,3 +28,79 @@ tasks:
     commands:
       - cd /app
       - PYTHONPATH=/app python -m scripts.convert_to_parquet
+
+  - id: execute_sql
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ventes-comptoir-coteaux
+    pythonVersion: "3.12"
+
+    env:
+      S3_ENDPOINT: "http://minio:9000"
+      MINIO_ROOT_USER: "{{ secret('MINIO_ROOT_USER') }}"
+      MINIO_ROOT_PASSWORD: "{{ secret('MINIO_ROOT_PASSWORD') }}"
+      MINIO_BUCKET: "comptoir-coteaux"
+
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      networkMode: "piplines_ventes_comptoir_coteaux_app-network"
+
+    commands:
+      - cd /app
+      - PYTHONPATH=/app python -m scripts.execute_sql
+
+  - id: z_score
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ventes-comptoir-coteaux
+    pythonVersion: "3.12"
+
+    env:
+      S3_ENDPOINT: "http://minio:9000"
+      MINIO_ROOT_USER: "{{ secret('MINIO_ROOT_USER') }}"
+      MINIO_ROOT_PASSWORD: "{{ secret('MINIO_ROOT_PASSWORD') }}"
+      MINIO_BUCKET: "comptoir-coteaux"
+
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      networkMode: "piplines_ventes_comptoir_coteaux_app-network"
+
+    commands:
+      - cd /app
+      - PYTHONPATH=/app python -m scripts.z_score
+
+  - id: tests
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ventes-comptoir-coteaux
+    pythonVersion: "3.12"
+
+    env:
+      S3_ENDPOINT: "http://minio:9000"
+      MINIO_ROOT_USER: "{{ secret('MINIO_ROOT_USER') }}"
+      MINIO_ROOT_PASSWORD: "{{ secret('MINIO_ROOT_PASSWORD') }}"
+      MINIO_BUCKET: "comptoir-coteaux"
+
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      networkMode: "piplines_ventes_comptoir_coteaux_app-network"
+
+    commands:
+      - cd /app
+      - PYTHONPATH=/app python -m tests.tests
+
+  - id: test_sales
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ventes-comptoir-coteaux
+    pythonVersion: "3.12"
+
+    env:
+      S3_ENDPOINT: "http://minio:9000"
+      MINIO_ROOT_USER: "{{ secret('MINIO_ROOT_USER') }}"
+      MINIO_ROOT_PASSWORD: "{{ secret('MINIO_ROOT_PASSWORD') }}"
+      MINIO_BUCKET: "comptoir-coteaux"
+
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      networkMode: "piplines_ventes_comptoir_coteaux_app-network"
+
+    commands:
+      - cd /app
+      - PYTHONPATH=/app python -m tests.test_sales

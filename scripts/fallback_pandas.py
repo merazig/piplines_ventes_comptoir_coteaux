@@ -1,51 +1,57 @@
-"""Solution qui remplace duckdb."""
+"""Pandas fallback for the sales pipeline."""
 
-from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 
+from scripts.minio_client import read_object, upload_file
+from scripts.export_sales import export_sales
 
-PARQUET_DIR = Path("work/parquet")
+from pathlib import Path
+import tempfile
 
 
-def clean_web() -> None:
+def read_parquet(period: str, layer: str, name: str) -> pd.DataFrame:
+    """Read a Parquet file from MinIO."""
+    path = f"parquet/{period}/{layer}/{name}.parquet"
+    return pd.read_parquet(read_object(path))
+
+
+def write_parquet(df: pd.DataFrame, object_name: str) -> None:
+    """Write Parquet."""
+    with tempfile.TemporaryDirectory() as tmp:
+        file_path = Path(tmp) / "output.parquet"
+        df.to_parquet(file_path, index=False)
+        upload_file(str(file_path), object_name)
+
+
+def clean_web(period: str) -> None:
     """Remove web records with a missing SKU."""
-    input_path = PARQUET_DIR / "web.parquet"
-    output_path = PARQUET_DIR / "web_clean.parquet"
-
-    df = pd.read_parquet(input_path)
+    df = read_parquet(period, "bronze", "web")
     df = df[df["sku"].notna()].copy()
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(output_path, index=False)
+    write_parquet(
+        df,
+        f"parquet/{period}/silver/web_clean.parquet",
+    )
 
-    print(f"Nettoyage Web terminé : {output_path}")
 
-
-def deduplicate_web() -> None:
+def deduplicate_web(period: str) -> None:
     """Keep only product records from the cleaned web data."""
-    input_path = PARQUET_DIR / "web_clean.parquet"
-    output_path = PARQUET_DIR / "web_deduplicated.parquet"
-
-    df = pd.read_parquet(input_path)
+    df = read_parquet(period, "silver", "web_clean")
     df = df[df["post_type"] == "product"].copy()
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(output_path, index=False)
+    write_parquet(
+        df,
+        f"parquet/{period}/silver/web_deduplicated.parquet",
+    )
 
-    print(f"Dédoublonnage Web terminé : {output_path}")
 
-
-def merge_data() -> None:
-    """Merge ERP, liaison, and web data using product identifiers."""
-    erp_path = PARQUET_DIR / "erp.parquet"
-    liaison_path = PARQUET_DIR / "liaison.parquet"
-    web_path = PARQUET_DIR / "web_deduplicated.parquet"
-    output_path = PARQUET_DIR / "merged.parquet"
-
-    erp = pd.read_parquet(erp_path)
-    liaison = pd.read_parquet(liaison_path)
-    web = pd.read_parquet(web_path)
+def merge_data(period: str) -> None:
+    """Merge ERP, liaison, and web data."""
+    erp = read_parquet(period, "bronze", "erp")
+    liaison = read_parquet(period, "bronze", "liaison")
+    web = read_parquet(period, "silver", "web_deduplicated")
 
     merged = erp.merge(
         liaison,
@@ -78,18 +84,15 @@ def merge_data() -> None:
         ]
     ]
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    merged.to_parquet(output_path, index=False)
+    write_parquet(
+        merged,
+        f"parquet/{period}/silver/merged.parquet",
+    )
 
-    print(f"Fusion terminée : {output_path}")
 
-
-def calculate_sales() -> None:
+def calculate_sales(period: str) -> None:
     """Calculate revenue for each product."""
-    input_path = PARQUET_DIR / "merged.parquet"
-    output_path = PARQUET_DIR / "sales.parquet"
-
-    df = pd.read_parquet(input_path)
+    df = read_parquet(period, "silver", "merged")
 
     df["revenue"] = df["price"] * df["total_sales"]
 
@@ -103,18 +106,22 @@ def calculate_sales() -> None:
         ]
     ]
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(output_path, index=False)
-
-    print(f"Calcul du chiffre d'affaires terminé : {output_path}")
+    write_parquet(
+        df,
+        f"parquet/{period}/gold/sales.parquet",
+    )
 
 
 def main() -> None:
-    """Execute the complete pandas fallback pipeline."""
-    clean_web()
-    deduplicate_web()
-    merge_data()
-    calculate_sales()
+    """Execute the complete Pandas fallback pipeline."""
+    period = datetime.now().strftime("%Y-%m")
+
+    clean_web(period)
+    deduplicate_web(period)
+    merge_data(period)
+    calculate_sales(period)
+
+    export_sales()
 
 
 if __name__ == "__main__":

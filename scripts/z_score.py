@@ -16,11 +16,11 @@ OUTPUT_DIR = Path("output")
 def main() -> None:
     """Calcule z-scores and genere output CSV."""
     period = pd.Timestamp.today().strftime("%Y-%m")
-    
+
     input_path = f"{PARQUET_DIR}/{period}/gold/sales.parquet"
     premium_path = f"{OUTPUT_DIR}/{period}/vins_premium.csv"
     ordinary_path = f"{OUTPUT_DIR}/{period}/vins_ordinaires.csv"
-    
+
     df = pd.read_parquet(read_object(input_path))
 
     mean_price = df["price"].mean()
@@ -32,7 +32,7 @@ def main() -> None:
     ordinary = df[df["z_score"] <= 2]
 
     client = get_s3_client()
-    
+
     premium_buffer = BytesIO()
     premium.to_csv(premium_buffer, index=False)
     premium_buffer.seek(0)

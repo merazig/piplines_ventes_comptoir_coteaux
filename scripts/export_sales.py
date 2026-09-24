@@ -21,9 +21,7 @@ def export_sales() -> None:
     with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
         df.to_excel(writer, sheet_name="CA par produit", index=False)
 
-        pd.DataFrame(
-            {"CA total": [total_revenue]}
-        ).to_excel(
+        pd.DataFrame({"CA total": [total_revenue]}).to_excel(
             writer,
             sheet_name="CA total",
             index=False,

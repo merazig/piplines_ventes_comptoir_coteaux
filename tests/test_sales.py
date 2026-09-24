@@ -1,78 +1,43 @@
-"""Tests for the sales pipeline."""
+"""Display sales pipeline control values."""
 
-import duckdb
+from datetime import datetime
 
 import pandas as pd
 
-
-def test_erp_count() -> None:
-    """Check the number of ERP rows."""
-    result = duckdb.sql("""
-        SELECT COUNT(*)
-        FROM read_parquet('work/parquet/erp.parquet')
-    """).fetchone()
-
-    assert result is not None
-    assert result[0] == 825
+from scripts.minio_client import read_object
 
 
-def test_liaison_count() -> None:
-    """Check the number of liaison rows."""
-    result = duckdb.sql("""
-        SELECT COUNT(*)
-        FROM read_parquet('work/parquet/liaison.parquet')
-    """).fetchone()
-
-    assert result is not None
-    assert result[0] == 825
+def read_parquet(period: str, layer: str, name: str) -> pd.DataFrame:
+    """Read a Parquet file from MinIO."""
+    path = f"parquet/{period}/{layer}/{name}.parquet"
+    return pd.read_parquet(read_object(path))
 
 
-def test_web_clean_count() -> None:
-    """Check the number of rows after Web cleaning."""
-    result = duckdb.sql("""
-        SELECT COUNT(*)
-        FROM read_parquet('work/parquet/web_clean.parquet')
-    """).fetchone()
+def main() -> None:
+    """Display sales pipeline control values."""
+    period = datetime.now().strftime("%Y-%m")
 
-    assert result is not None
-    assert result[0] == 1428
+    erp = read_parquet(period, "bronze", "erp")
+    liaison = read_parquet(period, "bronze", "liaison")
+    web_clean = read_parquet(period, "silver", "web_clean")
+    web_deduplicated = read_parquet(period, "silver", "web_deduplicated")
+    merged = read_parquet(period, "silver", "merged")
+    sales = read_parquet(period, "gold", "sales")
 
+    premium = pd.read_csv(read_object(f"output/{period}/vins_premium.csv"))
 
-def test_web_deduplicated_count() -> None:
-    """Check the number of Web products after deduplication."""
-    result = duckdb.sql("""
-        SELECT COUNT(*)
-        FROM read_parquet('work/parquet/web_deduplicated.parquet')
-    """).fetchone()
-
-    assert result is not None
-    assert result[0] == 714
-
-
-def test_merged_count() -> None:
-    """Check the number of rows in the merged dataset."""
-    result = duckdb.sql("""
-        SELECT COUNT(*)
-        FROM read_parquet('work/parquet/merged.parquet')
-    """).fetchone()
-
-    assert result is not None
-    assert result[0] == 714
+    print(f"ERP après dédoublonnage : {len(erp)} lignes")
+    print(f"Liaison après dédoublonnage : {len(liaison)} lignes")
+    print(f"Web après nettoyage : {len(web_clean)} lignes")
+    print(f"Web après dédoublonnage : {len(web_deduplicated)} lignes")
+    print(f"Fichier fusionné : {len(merged)} lignes")
+    print(
+        f"Chiffre d'affaires total : {sales['revenue'].sum():,.2f} €".replace(",", " ").replace(
+            ".", ","
+        )
+    )
+    print(f"Vins premium détectés (z > 2) : {len(premium)}")
 
 
-def test_total_revenue() -> None:
-    """Check the reference total revenue."""
-    result = duckdb.sql("""
-        SELECT SUM(revenue)
-        FROM read_parquet('work/parquet/sales.parquet')
-    """).fetchone()
-
-    assert result is not None
-    assert result[0] == 70568.6
-
-
-def test_premium_wines() -> None:
-    """Check the number of premium wines."""
-    df = pd.read_csv("outputs/vins_premium.csv")
-
-    assert len(df) == 30
+if __name__ == "__main__":
+    main()

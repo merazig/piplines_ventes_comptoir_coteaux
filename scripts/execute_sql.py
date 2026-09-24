@@ -57,6 +57,7 @@ def main() -> None:
     execute_sql("sales.sql")
 
     export_sales()
-    
+
+
 if __name__ == "__main__":
     main()
